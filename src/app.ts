@@ -14,7 +14,7 @@ app.use(
   })
 );
 app.use(compression());
-swaggerDocumentation(app);
+//swaggerDocumentation(app);
 app.use("/api", meraukeRoutes);
 
 

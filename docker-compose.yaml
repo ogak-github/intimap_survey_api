@@ -8,8 +8,8 @@ services:
     restart: always
     ports: 
       - '${APP_PORT}:${APP_PORT}'
-    depends_on: 
-      - db
+    # depends_on: 
+    #   - db
     environment:
       - DOCKER=true
       - DATABASE_URL=${DATABASE_URL}
@@ -17,22 +17,22 @@ services:
     networks:
       - backend-network
   
-  db:
-    container_name: intimap_survey_db
-    image: postgis/postgis:latest
-    restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    ports:
-      - '${POSTGRES_PORT}:5432' # HOST:CONTAINER
-    networks:
-      - backend-network
-volumes:
-  pg_data:
+#   db:
+#     container_name: intimap_survey_db
+#     image: postgis/postgis:latest
+#     restart: always
+#     environment:
+#       - POSTGRES_USER=${POSTGRES_USER}
+#       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#       - POSTGRES_DB=${POSTGRES_DB}
+#       - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+#     volumes:
+#       - pg_data:/var/lib/postgresql/data
+#     ports:
+#       - '${POSTGRES_PORT}:5432' # HOST:CONTAINER
+#     networks:
+#       - backend-network
+# volumes:
+#   pg_data:
 networks:
   backend-network:

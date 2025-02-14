@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, query } from "express";
 import pool from "./../db";
 import Street from "../interface/street";
 import { encode } from "@googlemaps/polyline-codec";
@@ -7,7 +7,7 @@ import { encode } from "@googlemaps/polyline-codec";
 const router = Router();
 
 router.get("/", (req: Request, res: Response) => {
-  res.redirect("/api/docs");
+  res.send("Merauke API");
 });
 
 /**
@@ -16,7 +16,7 @@ router.get("/", (req: Request, res: Response) => {
  *   name: Streets
  *   description: API for streets
  *
- * /getstreets:
+ * /loadstreets:
  *   get:
  *     summary: Get all streets
  *     tags: [Streets]  # 🔹 This removes the "default" category
@@ -112,7 +112,7 @@ router.get("/loadstreets", async (req: Request, res: Response) => {
     const result = await pool.query("SELECT id, osm_id, nama, truk, pickup, roda3, last_modified_time, meta, ST_AsText(geom) AS geom FROM street");
   
     var streets: Street[] = result.rows;
-    
+      
     res.json(streets);
     console.log(streets.length.toString());
   
@@ -159,7 +159,36 @@ router.get("/street", async (req: Request, res: Response) => {
     } catch (error) {
       console.error("Error fetching streets", error);
       res.status(500).json({ error: "Error fetching streets" });
+  }
+  
+});
+
+
+router.put("/bulk-update", async (req: Request, res: Response) => { 
+  const newData: Street[] = req.body;
+
+  if (!Array.isArray(newData) || newData.some(data => !data.id)) {
+    res.status(400).send("Invalid input data");
+    return;
+  }
+
+  console.log(newData);
+  try {
+    await pool.query('BEGIN');
+    for (const data of newData) {
+      const query = "UPDATE street SET osm_id = $2, nama = $3, truk = $4, pickup = $5, roda3 = $6, last_modified_time = $7, meta = $8, geom = ST_GeomFromText($9) WHERE id = $1";
+      const values = [data.id, data.osm_id, data.nama, data.truk, data.pickup, data.roda3, data.last_modified_time, data.meta, data.geom];
+      await pool.query(query, values);
     }
+
+    await pool.query('COMMIT');
+    res.status(200).send("Data updated successfully");
+
+  } catch (e) {
+    await pool.query('ROLLBACK');
+    console.error(e);
+    res.status(500).send("Error updating data");
+  }
 });
 
 
