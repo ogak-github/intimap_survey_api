@@ -2,6 +2,7 @@ import { Router, Request, Response, query } from "express";
 import pool from "./../db";
 import Street from "../interface/street";
 import { encode } from "@googlemaps/polyline-codec";
+import RouteIssue from "../interface/route_issue";
 
 
 const router = Router();
@@ -189,6 +190,66 @@ router.put("/bulk-update", async (req: Request, res: Response) => {
     console.error(e);
     res.status(500).send("Error updating data");
   }
+});
+
+
+router.get("/load-route-issues", async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query("SELECT id, street_id, blocked, notes, ST_AsText(geom) AS geom FROM route_issue");
+  
+    var routeIssues: RouteIssue[] = result.rows;
+      
+    res.json(routeIssues);
+    console.log("route issues: " + routeIssues.length.toString());
+  
+  } catch (error) {
+    console.error("Error fetching streets", error);
+    res.status(500).json({ error: "Error fetching streets" });
+  }
+})
+ 
+router.post("/add-route-issue", async (req: Request, res: Response) => {
+  const routeIssues: RouteIssue[] = req.body;
+  if (!Array.isArray(routeIssues) || routeIssues.some(data => !data.id)) {
+    res.status(400).send("Invalid input data");
+    return;
+  }
+
+  try {
+    await pool.query("BEGIN")
+     // Prepare the UPSERT query
+     const query = `
+     INSERT INTO route_issue (id, street_id, blocked, notes, geom)
+     VALUES ($1, $2, $3, $4, ST_GeomFromText($5))
+     ON CONFLICT (id) DO UPDATE SET
+       street_id = EXCLUDED.street_id,
+       blocked = EXCLUDED.blocked,
+       notes = EXCLUDED.notes,
+       geom = EXCLUDED.geom;
+   `;
+
+   // Execute the UPSERT query for each route issue
+   for (const issue of routeIssues) {
+     await pool.query(query, [
+       issue.id,
+       issue.street_id,
+       issue.blocked,
+       issue.notes,
+       issue.geom,
+     ]);
+   }
+
+   // Commit transaction
+   await pool.query("COMMIT");
+   res.send("Route issues updated successfully");
+    
+  } catch (err) {
+    await pool.query("ROLLBACK")
+    console.error(err);
+    res.status(500).send("Error on updating route issue");
+  }
+
+  
 });
 
 
