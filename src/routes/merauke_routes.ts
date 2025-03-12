@@ -207,7 +207,18 @@ router.get("/load-route-issues", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Error fetching streets" });
   }
 })
- 
+
+router.delete("/delete-route-issues/:id", async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await pool.query("DELETE FROM route_issue WHERE id = $1", [id]);
+    res.status(200).send("Route issues deleted successfully with id " + id);
+  } catch (error) {
+    console.error("Error deleting route issues with id", id, "error", error);
+    res.status(500).json({ error: "Error deleting route issues" });
+  }
+});
+  
 router.post("/add-route-issue", async (req: Request, res: Response) => {
   const routeIssues: RouteIssue[] = req.body;
   if (!Array.isArray(routeIssues) || routeIssues.some(data => !data.id)) {
